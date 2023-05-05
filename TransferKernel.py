@@ -24,26 +24,9 @@ class TransferKernel(Kernel):
                        [lambda, 1]]
         \end{equation}
 
-    Args:
-        num_tasks (int):
-            Total number of indices.
-        batch_shape (torch.Size, optional):
-            Set if the MultitaskKernel is operating on batches of data (and you want different
-            parameters for each batch)
-        rank (int):
-            Rank of :math:`B` matrix. Controls the degree of
-            correlation between the outputs. With a rank of 1 the
-            outputs are identical except for a scaling factor.
-        prior (:obj:`gpytorch.priors.Prior`):
-            Prior for :math:`B` matrix.
-        var_constraint (Constraint, optional):
-            Constraint for added diagonal component. Default: `Positive`.
-
     Attributes:
         covar_factor:
             The :math:`B` matrix.
-        raw_var:
-            The element-wise log of the :math:`\mathbf v` vector.
     
     Note: This transfer kernel only supports two tasks.
     """    
