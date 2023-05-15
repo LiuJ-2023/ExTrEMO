@@ -53,7 +53,7 @@ class FTGP():
             self.full_train_y.append(full_train_y)
             self.model_s.append(model)
 
-    # Train a TBCM
+    # Train a factorized TGP
     def train(self):
         # Train single task GP for target
         self.model_t.train()
@@ -98,7 +98,7 @@ class FTGP():
             #     optimizer.step(closure = closure)
             # print('Iter %d/%d - Loss: %.3f' % (1, 1, closure().item()))
 
-        # Train multi-task GP for each source-target pair
+        # Train TGP for each source-target pair
         self.similarities = []
         for j in range(self.source_num):
             # Set param that does not require training
@@ -177,17 +177,17 @@ class FTGP():
             predictions_s.append(self.model_s[j](X, test_i_task))          
         prediction_t = self.model_t(X)
 
-        # TBCM
+        # Prediction of the factorized TGP
         predicted_variance_inv_temp = torch.stack([1 / predictions_s[j].variance for j in range(M)]).sum(axis=0)
         predicted_variance_inv = predicted_variance_inv_temp + (1 - M) * 1.0 / prediction_t.variance
-        predicted_variance_TBCM = 1 / predicted_variance_inv
-        predicted_mean_TBCM = 0
+        predicted_variance_FTGP = 1 / predicted_variance_inv
+        predicted_mean_FTGP = 0
         for j in range(M):
-            predicted_mean_TBCM += (predictions_s[j].mean/ predictions_s[j].variance)
-        predicted_mean_TBCM += (1 - M) * (prediction_t.mean/ prediction_t.variance)
-        predicted_mean_TBCM = predicted_mean_TBCM * predicted_variance_TBCM
+            predicted_mean_FTGP += (predictions_s[j].mean/ predictions_s[j].variance)
+        predicted_mean_FTGP += (1 - M) * (prediction_t.mean/ prediction_t.variance)
+        predicted_mean_FTGP = predicted_mean_FTGP * predicted_variance_FTGP
 
-        # GPOE
+        # If the standard dev provided by factorized TGP is not positive, provided the predictions by using generalized product of experts (GPOE)
         predicted_variance_GPOE = M / predicted_variance_inv_temp
         predicted_mean_GPOE = 0
         for j in range(M):
@@ -195,8 +195,8 @@ class FTGP():
         predicted_mean_GPOE = predicted_mean_GPOE * predicted_variance_GPOE / M
 
         # If not positive, use GPOE
-        predicted_mean = (predicted_variance_inv>0)*predicted_mean_TBCM + (predicted_variance_inv<=0)*predicted_mean_GPOE
-        predicted_variance = (predicted_variance_inv>0)*predicted_variance_TBCM + (predicted_variance_inv<=0)*predicted_variance_GPOE
+        predicted_mean = (predicted_variance_inv>0)*predicted_mean_FTGP + (predicted_variance_inv<=0)*predicted_mean_GPOE
+        predicted_variance = (predicted_variance_inv>0)*predicted_variance_FTGP + (predicted_variance_inv<=0)*predicted_variance_GPOE
         
         predicted_std = predicted_variance.sqrt()
         # Return UCB/LCB
